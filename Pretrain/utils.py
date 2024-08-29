@@ -1,39 +1,40 @@
 import torch
 import pandas as pd
 import numpy as np
+from torch import Tensor
+import torch.distributed as dist
+from scipy.signal import stft
 
 
-
-
-def process_csv(DiTing_330km_csv_pre,ifnormalized=False):
+def process_csv(DiTing_330km_csv_pre, ifnormalized=False):
     # deal with mag_type_index
     DiTing_330km_csv_pre.insert(7, 'mag_type_index', DiTing_330km_csv_pre['mag_type'])
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type']=='Ml','mag_type_index'] = int(0)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type']=='ML','mag_type_index'] = int(0)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type']=='Ms','mag_type_index'] = int(1)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type']=='MS','mag_type_index'] = int(1)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type']=='mB','mag_type_index'] = int(2)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type']=='mb','mag_type_index'] = int(2)
-    
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type']=='Mb','mag_type_index'] = int(2)
-    
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type'] == 'Ml', 'mag_type_index'] = int(0)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type'] == 'ML', 'mag_type_index'] = int(0)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type'] == 'Ms', 'mag_type_index'] = int(1)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type'] == 'MS', 'mag_type_index'] = int(1)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type'] == 'mB', 'mag_type_index'] = int(2)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type'] == 'mb', 'mag_type_index'] = int(2)
+
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['mag_type'] == 'Mb', 'mag_type_index'] = int(2)
+
     # deal with p_clarity_index
     DiTing_330km_csv_pre.insert(10, 'p_clarity_index', DiTing_330km_csv_pre['p_clarity'])
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_clarity']==' ','p_clarity_index'] = int(0)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_clarity']=='E','p_clarity_index'] = int(1)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_clarity']=='I','p_clarity_index'] = int(2)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_clarity']=='(','p_clarity_index'] = int(3)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_clarity']=='n','p_clarity_index'] = int(4)
-    
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_clarity'] == ' ', 'p_clarity_index'] = int(0)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_clarity'] == 'E', 'p_clarity_index'] = int(1)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_clarity'] == 'I', 'p_clarity_index'] = int(2)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_clarity'] == '(', 'p_clarity_index'] = int(3)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_clarity'] == 'n', 'p_clarity_index'] = int(4)
+
     # deal with p_motion_index
     DiTing_330km_csv_pre.insert(12, 'p_motion_index', DiTing_330km_csv_pre['p_motion'])
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_motion']==' ','p_motion_index'] = int(0)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_motion']=='U','p_motion_index'] = int(1)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_motion']=='R','p_motion_index'] = int(2)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_motion']=='D','p_motion_index'] = int(3)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_motion']=='C','p_motion_index'] = int(4)
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_motion']=='n','p_motion_index'] = int(5)
-    
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_motion'] == ' ', 'p_motion_index'] = int(0)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_motion'] == 'U', 'p_motion_index'] = int(1)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_motion'] == 'R', 'p_motion_index'] = int(2)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_motion'] == 'D', 'p_motion_index'] = int(3)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_motion'] == 'C', 'p_motion_index'] = int(4)
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_motion'] == 'n', 'p_motion_index'] = int(5)
+
     DiTing_330km_csv_pre['baz'] = pd.to_numeric(DiTing_330km_csv_pre['baz'], errors='coerce')
     DiTing_330km_csv_pre.loc[np.isnan(DiTing_330km_csv_pre['baz']), 'baz'] = 0
 
@@ -45,50 +46,49 @@ def process_csv(DiTing_330km_csv_pre,ifnormalized=False):
 
     DiTing_330km_csv_pre['evmag'] = pd.to_numeric(DiTing_330km_csv_pre['evmag'], errors='coerce')
     DiTing_330km_csv_pre.loc[np.isnan(DiTing_330km_csv_pre['evmag']), 'evmag'] = 1.6
-    
+
     DiTing_330km_csv_pre['st_mag'] = pd.to_numeric(DiTing_330km_csv_pre['st_mag'], errors='coerce')
     DiTing_330km_csv_pre.loc[np.isnan(DiTing_330km_csv_pre['st_mag']), 'st_mag'] = 1.6
-    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['st_mag']>8.0, 'st_mag'] = 8.0
-    
+    DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['st_mag'] > 8.0, 'st_mag'] = 8.0
+
     selected_columns = ['evmag', 'p_pick', 's_pick', 'dis', 'st_mag', 'baz', 'Z_P_amplitude_snr', 'Z_P_power_snr',
-                    'Z_S_amplitude_snr', 'Z_S_power_snr']
-    
+                        'Z_S_amplitude_snr', 'Z_S_power_snr']
+
     if ifnormalized:
-        DiTing_330km_csv_pre['evmag'] = DiTing_330km_csv_pre['evmag']/7.7
-        DiTing_330km_csv_pre['st_mag'] = DiTing_330km_csv_pre['st_mag']/8.0
-        DiTing_330km_csv_pre['dis'] = DiTing_330km_csv_pre['dis']/330.0
-        
-        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['baz']>360, 'baz'] -= 360
-        DiTing_330km_csv_pre['baz'] = DiTing_330km_csv_pre['baz']/360.0
-        
-        
-        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_pick']<0, 'p_pick'] = 0
-        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_pick']>4000, 'p_pick'] = 4000
-        DiTing_330km_csv_pre['p_pick'] = DiTing_330km_csv_pre['p_pick']/4000
-        
-        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['s_pick']<0, 's_pick'] = 0
-        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['s_pick']>6000, 's_pick'] = 6000
-        DiTing_330km_csv_pre['s_pick'] = DiTing_330km_csv_pre['s_pick']/6000
-        
-        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['Z_P_amplitude_snr']>50,'Z_P_amplitude_snr'] = 50
-        DiTing_330km_csv_pre['Z_P_amplitude_snr'] = DiTing_330km_csv_pre['Z_P_amplitude_snr']/50.0
-        
-        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['Z_S_amplitude_snr']>5, 'Z_S_amplitude_snr'] = 5
-        DiTing_330km_csv_pre['Z_S_amplitude_snr'] = DiTing_330km_csv_pre['Z_S_amplitude_snr']/5.0
-        
-        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['Z_P_power_snr']<-10, 'Z_P_power_snr'] = -10
-        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['Z_P_power_snr']>30, 'Z_P_power_snr'] = 30
-        DiTing_330km_csv_pre['Z_P_power_snr'] = (DiTing_330km_csv_pre['Z_P_power_snr']+10)/40
-        
-        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['Z_S_power_snr']<-10, 'Z_S_power_snr'] = -10
-        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['Z_S_power_snr']>15, 'Z_S_power_snr'] = 15
-        DiTing_330km_csv_pre['Z_S_power_snr'] = (DiTing_330km_csv_pre['Z_S_power_snr']+10)/25
-        
-# 0.003 57668.855 300
-# -44.963 89.86 -30 30
-# 0.0 833.487 20
-# -129.66 50.964 -30 30
-    
+        DiTing_330km_csv_pre['evmag'] = DiTing_330km_csv_pre['evmag'] / 7.7
+        DiTing_330km_csv_pre['st_mag'] = DiTing_330km_csv_pre['st_mag'] / 8.0
+        DiTing_330km_csv_pre['dis'] = DiTing_330km_csv_pre['dis'] / 330.0
+
+        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['baz'] > 360, 'baz'] -= 360
+        DiTing_330km_csv_pre['baz'] = DiTing_330km_csv_pre['baz'] / 360.0
+
+        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_pick'] < 0, 'p_pick'] = 0
+        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['p_pick'] > 4000, 'p_pick'] = 4000
+        DiTing_330km_csv_pre['p_pick'] = DiTing_330km_csv_pre['p_pick'] / 4000
+
+        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['s_pick'] < 0, 's_pick'] = 0
+        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['s_pick'] > 6000, 's_pick'] = 6000
+        DiTing_330km_csv_pre['s_pick'] = DiTing_330km_csv_pre['s_pick'] / 6000
+
+        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['Z_P_amplitude_snr'] > 50, 'Z_P_amplitude_snr'] = 50
+        DiTing_330km_csv_pre['Z_P_amplitude_snr'] = DiTing_330km_csv_pre['Z_P_amplitude_snr'] / 50.0
+
+        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['Z_S_amplitude_snr'] > 5, 'Z_S_amplitude_snr'] = 5
+        DiTing_330km_csv_pre['Z_S_amplitude_snr'] = DiTing_330km_csv_pre['Z_S_amplitude_snr'] / 5.0
+
+        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['Z_P_power_snr'] < -10, 'Z_P_power_snr'] = -10
+        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['Z_P_power_snr'] > 30, 'Z_P_power_snr'] = 30
+        DiTing_330km_csv_pre['Z_P_power_snr'] = (DiTing_330km_csv_pre['Z_P_power_snr'] + 10) / 40
+
+        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['Z_S_power_snr'] < -10, 'Z_S_power_snr'] = -10
+        DiTing_330km_csv_pre.loc[DiTing_330km_csv_pre['Z_S_power_snr'] > 15, 'Z_S_power_snr'] = 15
+        DiTing_330km_csv_pre['Z_S_power_snr'] = (DiTing_330km_csv_pre['Z_S_power_snr'] + 10) / 25
+
+    # 0.003 57668.855 300
+    # -44.963 89.86 -30 30
+    # 0.0 833.487 20
+    # -129.66 50.964 -30 30
+
     return DiTing_330km_csv_pre
 
 
@@ -105,63 +105,63 @@ def accuracy(output, target, topk=(1,)):
         res = []
         for k in topk:
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size))
+            res.append(correct_k.mul_(1.0 / batch_size))
         return res
-    
-    
-    
-def cal_acc_location(label,pred,returnlat=False):
+
+
+def cal_acc_location(label, pred, returnlat=False):
     label = label.cpu().detach().numpy()
-    pred  =  pred.cpu().detach().numpy()
-    
-    pred = unscale(pred)  
-    label = unscale(label)   
+    pred = pred.cpu().detach().numpy()
+
+    pred = unscale(pred)
+    label = unscale(label)
     latlon_km = 40075 / 360.
 
-    err_dist = np.sqrt((pred[:, 0] - label[:, 0])**2 + (pred[:, 1] - label[:, 1])**2) * latlon_km
+    err_dist = np.sqrt((pred[:, 0] - label[:, 0]) ** 2 + (pred[:, 1] - label[:, 1]) ** 2) * latlon_km
     err_lat = np.abs(pred[:, 0] - label[:, 0])
     err_lon = np.abs(pred[:, 1] - label[:, 1])
     err_depth = np.abs(pred[:, 2] - label[:, 2])
     err_mag = np.abs(pred[:, 3] - label[:, 3])
-    return err_dist,err_depth,err_mag
+    return err_dist, err_depth, err_mag
 
 
-def cal_acc_dis(label,pred):
+def cal_acc_dis(label, pred):
     label = label.cpu().detach().numpy()
-    pred  =  pred.cpu().detach().numpy()
-    
-    pred = unscale(pred)  
-    label = unscale(label)   
+    pred = pred.cpu().detach().numpy()
+
+    pred = unscale(pred)
+    label = unscale(label)
     latlon_km = 40075 / 360.
 
-    err_dist = np.sqrt((pred[:, 0] - label[:, 0])**2 + (pred[:, 1] - label[:, 1])**2) * latlon_km
+    err_dist = np.sqrt((pred[:, 0] - label[:, 0]) ** 2 + (pred[:, 1] - label[:, 1]) ** 2) * latlon_km
     err_lat = np.abs(pred[:, 0] - label[:, 0])
     err_lon = np.abs(pred[:, 1] - label[:, 1])
     return err_dist
 
-def cal_acc_dep_mag(label,pred,f_type = 'dep'):
+
+def cal_acc_dep_mag(label, pred, f_type='dep'):
     label = label.cpu().detach().numpy()
-    pred  =  pred.cpu().detach().numpy()
-    
+    pred = pred.cpu().detach().numpy()
+
     if f_type == 'dep':
-        pred = unscale(pred,dep_type = True)  
-        label = unscale(label,dep_type = True) 
+        pred = unscale(pred, dep_type=True)
+        label = unscale(label, dep_type=True)
     if f_type == 'mag':
-        pred = unscale(pred,dep_type = False)  
-        label = unscale(label,dep_type = False)  
-        
+        pred = unscale(pred, dep_type=False)
+        label = unscale(label, dep_type=False)
+
     err_fea = np.abs(pred[:, 0] - label[:, 0])
     return err_fea
 
 
-def cal_acc_degree(label,pred):
+def cal_acc_degree(label, pred):
     # label = label.cpu().detach().numpy()
     # pred  =  pred.cpu().detach().numpy()
     abs_diff = torch.abs(label - pred)
-    strike = torch.mean(torch.minimum(abs_diff[:,0], 1 - abs_diff[:,0]))*360
-    dip = torch.mean(abs_diff[:,1])*90
-    slip = torch.mean(torch.minimum(abs_diff[:,2], 1 - abs_diff[:,2]))*360
-    return strike.cpu().detach().numpy(),dip.cpu().detach().numpy(),slip.cpu().detach().numpy()
+    strike = torch.mean(torch.minimum(abs_diff[:, 0], 1 - abs_diff[:, 0])) * 360
+    dip = torch.mean(abs_diff[:, 1]) * 90
+    slip = torch.mean(torch.minimum(abs_diff[:, 2], 1 - abs_diff[:, 2])) * 360
+    return strike.cpu().detach().numpy(), dip.cpu().detach().numpy(), slip.cpu().detach().numpy()
 
 
 def scale(x):
@@ -187,7 +187,7 @@ def scale(x):
     return x
 
 
-def unscale(x,dep_type = True):    
+def unscale(x, dep_type=True):
     minlatitude = 30
     maxlatitude = 45
     minlongitude = 130
@@ -195,7 +195,7 @@ def unscale(x,dep_type = True):
     maxdepth = 1000
     minmag = 3
     maxmag = 8
-    
+
     """ Function to unscale the data """
     # x = x / 2 + 0.5
     if len(x.shape) == 2:
@@ -212,7 +212,7 @@ def unscale(x,dep_type = True):
             x[:, 0] = x[:, 0] * (maxlongitude - minlongitude) + minlongitude
             x[:, 2] = x[:, 2] * maxdepth
             x[:, 3] = x[:, 3] * maxmag
-        
+
     # elif len(x.shape) == 3:
     #     x[:, :, 0] = x[:, :, 0] * (maxlatitude - minlatitude) + minlatitude
     #     x[:, :, 1] = x[:, :, 1] * (maxlongitude - minlongitude) + minlongitude
@@ -220,3 +220,48 @@ def unscale(x,dep_type = True):
     #     x[:, :, 3] = x[:, :, 3] * (maxmag - minmag) + minmag
     return x
 
+
+def all_reduce_mean(x):
+    world_size = dist.get_world_size()
+    if world_size > 1:
+        x_reduce = torch.tensor(x).cuda()
+        dist.all_reduce(x_reduce)
+        x_reduce /= world_size
+        return x_reduce.item()
+    else:
+        return x
+
+
+def get_bytes_range(source: str, bytes_start: int, num_bytes: int) -> bytes:
+    """
+    从指定位置读取二进制文件，读取指定的字节数
+    """
+    with open(source, "rb") as f:
+        f.seek(bytes_start)
+        return f.read(num_bytes)
+
+
+def z_norm(x: np.ndarray) -> np.ndarray:
+    """z-score 归一化"""
+    for i in range(3):
+        x_std = x[:, i].std() + 1e-3
+        x[:, i] = (x[:, i] - x[:, i].mean()) / x_std
+    return x
+
+
+def cal_norm_spectrogram(x: np.ndarray,
+                         sample_rate=100,
+                         window_length=20,
+                         nfft=100) -> np.ndarray:
+    spec = np.zeros([3, int(x.shape[0] / window_length * 2), int(nfft / 2)])
+    for i in range(3):
+        _, _, spectrogram = stft(x[:, i],
+                                 fs=sample_rate,
+                                 window='hann',
+                                 nperseg=window_length,
+                                 noverlap=int(window_length / 2),
+                                 nfft=nfft,
+                                 boundary='zeros')
+        spectrogram = spectrogram[1:, 1:]
+        spec[i, :] = np.abs(spectrogram).transpose(1, 0)
+    return spec

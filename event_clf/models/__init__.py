@@ -1,0 +1,1 @@
+from model_seismic_clip import AUDIO_CLIP
